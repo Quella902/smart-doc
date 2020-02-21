@@ -1,5 +1,8 @@
 <h1 align="center">Smart-Doc Project</h1>
 
+在官方基础上，新增controller单个生成文档
+支持controller过滤
+
 [中文文档](https://github.com/shalousun/smart-doc/blob/master/README_CN.md)
 
 ## Introduce
