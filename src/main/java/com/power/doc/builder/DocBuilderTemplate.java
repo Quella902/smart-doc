@@ -42,6 +42,11 @@ import java.util.Objects;
 import static com.power.doc.constants.DocGlobalConstants.FILE_SEPARATOR;
 
 /**
+ * 文档构建模版
+ *  主要：检查ApiConfig配置
+ *       获取文档数据
+ *       生成api文档
+ *
  * @author yu 2019/9/26.
  */
 public class DocBuilderTemplate {
@@ -99,7 +104,7 @@ public class DocBuilderTemplate {
 
     /**
      * Generate api documentation for all controllers.
-     *
+     * 生成api文档。
      * @param apiDocList    list of api doc
      * @param config        api config
      * @param template      template
@@ -178,20 +183,24 @@ public class DocBuilderTemplate {
     /**
      * Generate a single controller api document
      *
-     * @param projectBuilder projectBuilder
+     * @param projectBuilder projectBuilder  文档配置信息
      * @param controllerName controller name
      * @param template       template
-     * @param fileExtension  file extension
+     * @param fileExtension  file extension  后缀
      */
     public void buildSingleApi(ProjectDocConfigBuilder projectBuilder, String controllerName, String template, String fileExtension) {
         ApiConfig config = projectBuilder.getApiConfig();
         FileUtil.mkdirs(config.getOutPath());
         IDocBuildTemplate docBuildTemplate = new SpringBootDocBuildTemplate();
+        //获取单个文档数据
         ApiDoc doc = docBuildTemplate.getSingleApiData(projectBuilder, controllerName);
+        // 获取Beerl模板数据
         Template mapper = BeetlTemplateUtil.getByName(template);
+        //文档数据 填充到 模板数据
         mapper.binding(TemplateVariable.DESC.getVariable(), doc.getDesc());
         mapper.binding(TemplateVariable.NAME.getVariable(), doc.getName());
         mapper.binding(TemplateVariable.LIST.getVariable(), doc.getList());
+        //写出文件
         FileUtil.writeFileNotAppend(mapper.render(), config.getOutPath() + FILE_SEPARATOR + doc.getName() + fileExtension);
     }
 

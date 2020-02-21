@@ -36,6 +36,13 @@ import java.util.Map;
 /**
  * Beetl template handle util
  *
+ * <P>
+ *     Beetl 新一代Java模板引擎典范
+ *     Beetl是Bee Template Language的缩写，它绝不是简单的另外一种模板引擎，而是新一代的模板引擎，
+ *     它功能强大，性能良好，超过当前流行的模板引擎。而且还易学易用。
+ *     http://ibeetl.com/
+ * </P>
+ *
  * @author sunyu on 2016/12/6.
  */
 public class BeetlTemplateUtil {

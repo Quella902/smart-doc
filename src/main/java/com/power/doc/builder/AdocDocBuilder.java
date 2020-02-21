@@ -76,7 +76,7 @@ public class AdocDocBuilder {
 
     /**
      * Generate a single controller api document
-     *
+     * 生成单个controller的API文档
      * @param config         ApiConfig
      * @param controllerName controller name
      */

@@ -23,6 +23,7 @@
 package com.power.doc.model;
 
 /**
+ * 参数实体
  * @author yu 2019/9/27.
  */
 public class ApiParam {

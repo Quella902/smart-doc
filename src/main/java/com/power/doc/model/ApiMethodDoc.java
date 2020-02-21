@@ -29,6 +29,7 @@ import java.util.List;
 
 /**
  * java api method info model.
+ * java api方法信息模型。
  */
 public class ApiMethodDoc implements Serializable {
 

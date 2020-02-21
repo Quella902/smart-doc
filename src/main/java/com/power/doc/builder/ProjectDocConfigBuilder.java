@@ -44,10 +44,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.power.doc.constants.DocGlobalConstants.DEFAULT_SERVER_URL;
 
 /**
+ * 项目配置构建
  * @author yu 2019/12/21.
  */
 public class ProjectDocConfigBuilder {
 
+    //用来加载提供的源码路径下源码文件
     private JavaProjectBuilder javaProjectBuilder;
 
     private Map<String, JavaClass> classFilesMap = new ConcurrentHashMap<>();
@@ -73,8 +75,10 @@ public class ProjectDocConfigBuilder {
         } else {
             this.serverUrl = apiConfig.getServerUrl();
         }
+        //返回此Java虚拟机的默认字符集。
         javaProjectBuilder.setEncoding(Charset.defaultCharset().toString());
         this.javaProjectBuilder = javaProjectBuilder;
+        //加载源码 到 javaProjectBuilder 类中
         this.loadJavaSource(apiConfig.getSourceCodePaths(), this.javaProjectBuilder);
         this.initClassFilesMap();
         this.initCustomResponseFieldsMap(apiConfig);

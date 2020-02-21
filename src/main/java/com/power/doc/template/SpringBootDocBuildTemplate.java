@@ -22,52 +22,84 @@
  */
 package com.power.doc.template;
 
+import static com.power.doc.constants.DocGlobalConstants.FILE_CONTENT_TYPE;
+import static com.power.doc.constants.DocGlobalConstants.JSON_CONTENT_TYPE;
+import static com.power.doc.constants.DocTags.IGNORE;
+
 import com.power.common.util.JsonFormatUtil;
 import com.power.common.util.RandomUtil;
 import com.power.common.util.StringUtil;
 import com.power.common.util.UrlUtil;
 import com.power.doc.builder.ProjectDocConfigBuilder;
-import com.power.doc.constants.*;
+import com.power.doc.constants.DocAnnotationConstants;
+import com.power.doc.constants.DocGlobalConstants;
+import com.power.doc.constants.DocTags;
+import com.power.doc.constants.Methods;
+import com.power.doc.constants.SpringMvcAnnotations;
+import com.power.doc.constants.SpringMvcRequestAnnotationsEnum;
 import com.power.doc.handler.SpringMVCRequestHeaderHandler;
 import com.power.doc.handler.SpringMVCRequestMappingHandler;
 import com.power.doc.helper.FormDataBuildHelper;
 import com.power.doc.helper.JsonBuildHelper;
 import com.power.doc.helper.ParamsBuildHelper;
-import com.power.doc.model.*;
+import com.power.doc.model.ApiConfig;
+import com.power.doc.model.ApiDoc;
+import com.power.doc.model.ApiMethodDoc;
+import com.power.doc.model.ApiParam;
+import com.power.doc.model.ApiReqHeader;
+import com.power.doc.model.CustomRespField;
+import com.power.doc.model.FormData;
 import com.power.doc.model.request.ApiRequestExample;
 import com.power.doc.model.request.RequestMapping;
 import com.power.doc.utils.DocClassUtil;
 import com.power.doc.utils.DocUtil;
 import com.power.doc.utils.JavaClassUtil;
 import com.power.doc.utils.JavaClassValidateUtil;
-import com.thoughtworks.qdox.model.*;
+import com.thoughtworks.qdox.JavaProjectBuilder;
+import com.thoughtworks.qdox.model.JavaAnnotation;
+import com.thoughtworks.qdox.model.JavaClass;
+import com.thoughtworks.qdox.model.JavaMethod;
+import com.thoughtworks.qdox.model.JavaParameter;
+import com.thoughtworks.qdox.model.JavaSource;
+import com.thoughtworks.qdox.model.JavaType;
 import com.thoughtworks.qdox.model.expression.AnnotationValue;
-
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.power.doc.constants.DocGlobalConstants.FILE_CONTENT_TYPE;
-import static com.power.doc.constants.DocGlobalConstants.JSON_CONTENT_TYPE;
-import static com.power.doc.constants.DocTags.IGNORE;
-
 /**
+ * 基于springboot的文档构建模版
  * @author yu 2019/12/21.
  */
 public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
 
     private List<ApiReqHeader> headers;
 
+    /**
+     * 获取文档列表
+     * @param projectBuilder 项目文档配置信息
+     * @return
+     */
     @Override
     public List<ApiDoc> getApiData(ProjectDocConfigBuilder projectBuilder) {
         ApiConfig apiConfig = projectBuilder.getApiConfig();
         this.headers = apiConfig.getRequestHeaders();
         List<ApiDoc> apiDocList = new ArrayList<>();
         int order = 0;
+        //获取配置的所有源码文件
         for (JavaClass cls : projectBuilder.getJavaProjectBuilder().getClasses()) {
             if (!checkController(cls)) {
                 continue;
             }
+            //过滤包
             if (StringUtil.isNotEmpty(apiConfig.getPackageFilters())) {
                 if (DocUtil.isMatch(apiConfig.getPackageFilters(), cls.getCanonicalName())) {
                     order++;
@@ -83,9 +115,34 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
         return apiDocList;
     }
 
+    /**
+     * 获取单个文档
+     * @param projectBuilder 项目文档配置信息
+     * @param apiClassName 要生成文档的类名
+     * @return
+     */
     @Override
     public ApiDoc getSingleApiData(ProjectDocConfigBuilder projectBuilder, String apiClassName) {
-        return null;
+        ArrayList<ApiDoc> apiDocList = new ArrayList<>();
+        ApiConfig apiConfig = projectBuilder.getApiConfig();
+        this.headers = apiConfig.getRequestHeaders();
+        JavaProjectBuilder javaProjectBuilder = new JavaProjectBuilder();
+        try {
+            JavaSource javaSource = javaProjectBuilder.addSource(new File(apiClassName));
+            Collection<JavaClass> classes = javaProjectBuilder.getClasses();
+            for (JavaClass cls : classes) {
+                if (!checkController(cls)) {
+                    return new ApiDoc();
+                }
+                int order = 0;
+                List<ApiMethodDoc> apiMethodDocs = buildControllerMethod(cls, apiConfig, projectBuilder);
+                this.handleApiDoc(cls, apiDocList, apiMethodDocs, order, apiConfig.isMd5EncryptedHtmlName());
+            }
+            return apiDocList.get(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ApiDoc();
     }
 
     @Override
@@ -96,14 +153,25 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
         return false;
     }
 
+    /**
+     * 获取controller中的方法
+     * @param cls  生成api的controller
+     * @param apiConfig  用户提供的配置信息
+     * @param projectBuilder 配置构建类
+     * @return
+     */
     private List<ApiMethodDoc> buildControllerMethod(final JavaClass cls, ApiConfig apiConfig, ProjectDocConfigBuilder projectBuilder) {
+        //获取类全路径名
         String clazName = cls.getCanonicalName();
+        // 获取注解
         List<JavaAnnotation> classAnnotations = cls.getAnnotations();
         String baseUrl = "";
         for (JavaAnnotation annotation : classAnnotations) {
             String annotationName = annotation.getType().getName();
+            //类中 @RequestMapping 注解
             if (DocAnnotationConstants.REQUEST_MAPPING.equals(annotationName) || DocGlobalConstants.REQUEST_MAPPING_FULLY.equals(annotationName)) {
                 if (annotation.getNamedParameter("value") != null) {
+                    // 删除 value 中的 单引号 双引号
                     baseUrl = StringUtil.removeQuotes(annotation.getNamedParameter("value").toString());
                 }
             }
@@ -112,7 +180,7 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
         List<ApiMethodDoc> methodDocList = new ArrayList<>(methods.size());
         int methodOrder = 0;
         for (JavaMethod method : methods) {
-            if (method.isPrivate()) {
+            if (method.isPrivate() || null != method.getTagByName(IGNORE)) {
                 continue;
             }
             if (StringUtil.isEmpty(method.getComment()) && apiConfig.isStrict()) {
@@ -123,11 +191,13 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
             apiMethodDoc.setOrder(methodOrder);
             apiMethodDoc.setDesc(method.getComment());
             apiMethodDoc.setName(method.getName());
+            // md5 生成是方法唯一ID
             String methodUid = DocUtil.generateId(clazName + method.getName());
             apiMethodDoc.setMethodId(methodUid);
+            //获取 @apiNote 注解 信息
             String apiNoteValue = DocUtil.getNormalTagComments(method, DocTags.API_NOTE, cls.getName());
             if (StringUtil.isEmpty(apiNoteValue)) {
-                apiNoteValue = method.getComment();
+//                apiNoteValue = method.getComment();
             }
             String authorValue = DocUtil.getNormalTagComments(method, DocTags.AUTHOR, cls.getName());
             if (apiConfig.isShowAuthor() && StringUtil.isNotEmpty(authorValue)) {
@@ -141,13 +211,15 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
             List<ApiReqHeader> apiReqHeaders = new SpringMVCRequestHeaderHandler().handle(method);
             apiMethodDoc.setRequestHeaders(apiReqHeaders);
             if (Objects.nonNull(requestMapping)) {
-                if (null != method.getTagByName(IGNORE)) {
-                    continue;
-                }
+//                if (null != method.getTagByName(IGNORE)) {
+//                    continue;
+//                }
                 apiMethodDoc.setType(requestMapping.getMethodType());
                 apiMethodDoc.setUrl(requestMapping.getUrl());
                 apiMethodDoc.setServerUrl(projectBuilder.getServerUrl());
+                //controller path
                 apiMethodDoc.setPath(requestMapping.getShortUrl());
+                // 是否是不推荐的方法
                 apiMethodDoc.setDeprecated(requestMapping.isDeprecated());
                 // build request params
                 List<ApiParam> requestParams = requestParams(method, DocTags.PARAM, projectBuilder);
@@ -471,12 +543,22 @@ public class SpringBootDocBuildTemplate implements IDocBuildTemplate {
         return paramList;
     }
 
+    /**
+     * 校验是否是controller
+     *
+     * @param cls
+     * @return
+     */
     private boolean checkController(JavaClass cls) {
         List<JavaAnnotation> classAnnotations = cls.getAnnotations();
         for (JavaAnnotation annotation : classAnnotations) {
             String name = annotation.getType().getName();
             name = JavaClassUtil.getAnnotationSimpleName(name);
             if (SpringMvcAnnotations.CONTROLLER.equals(name) || SpringMvcAnnotations.REST_CONTROLLER.equals(name)) {
+                // 判断是否有@ignore注解 有返回false 不加载
+                if (null != cls.getTagByName(IGNORE)) {
+                    return false;
+                }
                 return true;
             }
         }

@@ -42,12 +42,13 @@ public class ApiConfig {
     private String serverUrl;
 
     /**
-     * Set comments check mode
+     * 注释检查模式
+     * 为true 时， 方法的注释不能为空
      */
     private boolean isStrict;
 
     /**
-     * Merge all api doc into one document
+     * 将所有api文档合并到一个文档中
      */
     private boolean allInOne;
 
@@ -74,7 +75,9 @@ public class ApiConfig {
     private boolean coverOld;
 
     /**
-     * list of custom response filed
+     * list of custom response filed  自定义响应字段
+     * 对于外部jar的类，api-doc目前无法自动获取注释，
+     * 如果有这种场景，则自己添加字段和注释，api-doc后期遇到同名字段则直接给相应字段加注释
      */
     private List<CustomRespField> customResponseFields;
 
@@ -110,6 +113,7 @@ public class ApiConfig {
 
     /**
      * adoc flag
+     * adoc  文件标记  smart-doc支持 adoc 、beetl 、 html
      */
     private boolean adoc;
 

@@ -24,6 +24,9 @@ package com.power.doc.model;
 
 import java.util.List;
 
+/**
+ *  接口文档封装实体
+ */
 public class ApiDoc {
 
     /**

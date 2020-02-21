@@ -35,10 +35,12 @@ import static com.power.doc.constants.DocGlobalConstants.*;
 
 /**
  * use to create markdown doc
+ * markdown文件构建器
  *
  * @author yu 2019/09/20
  */
 public class ApiDocBuilder {
+
 
     private static final String API_EXTENSION = "Api.md";
 
@@ -61,14 +63,19 @@ public class ApiDocBuilder {
     public static void buildApiDoc(ApiConfig config, JavaProjectBuilder javaProjectBuilder) {
         config.setAdoc(false);
         DocBuilderTemplate builderTemplate = new DocBuilderTemplate();
+        // 校验配置
         builderTemplate.checkAndInit(config);
+        // 项目配置构建
         ProjectDocConfigBuilder configBuilder = new ProjectDocConfigBuilder(config, javaProjectBuilder);
+        //文档构建模版
         IDocBuildTemplate docBuildTemplate = new SpringBootDocBuildTemplate();
+        //根据配置信息 和 模版 获取 文档数据
         List<ApiDoc> apiDocList = docBuildTemplate.getApiData(configBuilder);
         if (config.isAllInOne()) {
             String version = config.isCoverOld() ? "" : "-V" + DateTimeUtil.long2Str(System.currentTimeMillis(), DATE_FORMAT);
             builderTemplate.buildAllInOne(apiDocList, config, javaProjectBuilder, ALL_IN_ONE_MD_TPL, "AllInOne" + version + ".md");
         } else {
+            //
             builderTemplate.buildApiDoc(apiDocList, config, API_DOC_MD_TPL, API_EXTENSION);
             builderTemplate.buildErrorCodeDoc(config, ERROR_CODE_LIST_MD_TPL, ERROR_CODE_LIST_MD);
         }
@@ -76,16 +83,20 @@ public class ApiDocBuilder {
 
     /**
      * Generate a single controller api document
-     *
+     * 生成单个controller的API文档
      * @param config         (ApiConfig
      * @param controllerName controller name
      */
     public static void buildSingleApiDoc(ApiConfig config, String controllerName) {
         config.setAdoc(false);
+        // 用来加载提供的源码路径下源码文件
         JavaProjectBuilder javaProjectBuilder = new JavaProjectBuilder();
+        // 项目配置构建
         ProjectDocConfigBuilder configBuilder = new ProjectDocConfigBuilder(config, javaProjectBuilder);
         DocBuilderTemplate builderTemplate = new DocBuilderTemplate();
+        //校验配置信息
         builderTemplate.checkAndInit(config);
+        //markdown模板文件  ApiDoc.btl  生成文件后缀名
         builderTemplate.buildSingleApi(configBuilder, controllerName, API_DOC_MD_TPL, API_EXTENSION);
     }
 }

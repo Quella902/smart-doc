@@ -40,10 +40,17 @@ import java.util.List;
 import static com.power.doc.constants.DocGlobalConstants.NO_COMMENTS_FOUND;
 
 /**
+ * 文档构建模版接口
  * @author yu 2019/12/21.
  */
 public interface IDocBuildTemplate {
 
+    /**
+     * 创建文档请求头内容
+     * @param headers
+     * @param isAdoc
+     * @return
+     */
     default String createDocRenderHeaders(List<ApiReqHeader> headers, boolean isAdoc) {
         StringBuilder builder = new StringBuilder();
         if (CollectionUtil.isEmpty(headers)) {
@@ -62,6 +69,12 @@ public interface IDocBuildTemplate {
         return builder.toString();
     }
 
+    /**
+     * 注释解析
+     * 注释中包含 |  只获取“|”前面的 防止跟 md文件冲突
+     * @param comment
+     * @return
+     */
     default String paramCommentResolve(String comment) {
         if (StringUtil.isEmpty(comment)) {
             comment = NO_COMMENTS_FOUND;
@@ -74,6 +87,14 @@ public interface IDocBuildTemplate {
     }
 
 
+    /**
+     * 处理文档
+     * @param cls
+     * @param apiDocList
+     * @param apiMethodDocs
+     * @param order
+     * @param isUseMD5
+     */
     default void handleApiDoc(JavaClass cls, List<ApiDoc> apiDocList, List<ApiMethodDoc> apiMethodDocs, int order, boolean isUseMD5) {
         String controllerName = cls.getName();
         ApiDoc apiDoc = new ApiDoc();
@@ -133,8 +154,19 @@ public interface IDocBuildTemplate {
         return null;
     }
 
+    /**
+     * 获取文档列表
+     * @param projectBuilder 项目文档配置信息
+     * @return
+     */
     List<ApiDoc> getApiData(ProjectDocConfigBuilder projectBuilder);
 
+    /**
+     * 获取单个文档
+     * @param projectBuilder 项目文档配置信息
+     * @param apiClassName 要生成文档的类名
+     * @return
+     */
     ApiDoc getSingleApiData(ProjectDocConfigBuilder projectBuilder, String apiClassName);
 
     boolean ignoreReturnObject(String typeName);
